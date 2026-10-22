@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scope Video Tool</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      color: #FF6B00;
+      font-size: 1.8rem;
+      margin: 12px 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      flex: 1;
+      padding: 16px;
+      font-size: 1.2rem;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: #FF6B00;
+      color: #000;
+      font-weight: bold;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    button, .btn {
+      display: block;
+      width: 100%;
+      padding: 18px;
+      font-size: 1.3rem;
+      background: #FF6B00;
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      margin: 8px 0;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { background: #555; color: #999; }
+    input[type="file"] { display: none; }
+    .file-list {
+      margin: 12px 0;
+      min-height: 60px;
+    }
+    .file-item {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 8px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-item.dragging { opacity: 0.5; }
+    .file-name { font-weight: bold; font-size: 1.1rem; word-break: break-all; }
+    .file-meta { color: #aaa; font-size: 0.95rem; }
+    .progress-bar {
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 8px 0;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #FF6B00;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      line-height: 20px;
+      font-size: 0.85rem;
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 0 0 2px #000;
+    }
+    .progress-bar.indeterminate .progress-fill {
+      width: 30%;
+      animation: indeterminate 1.2s infinite linear;
+    }
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+    .status { color: #FF6B00; font-size: 1rem; margin: 4px 0; }
+    .warning {
+      background: #442200;
+      color: #ffaa00;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+    .error {
+      background: #440000;
+      color: #ff6666;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 8px 0;
+    }
+    .output-item {
+      background: #111;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 8px 0;
+    }
+    a.btn, button.share {
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .reorder-hint { color: #888; font-size: 0.9rem; text-align: center; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h1>Scope Video Tool</h1>
+  <div class="tabs">
+    <button class="tab active" data-tab="convert">Convert AVI → MP4</button>
+    <button class="tab" data-tab="combine">Combine Videos</button>
+  </div>
+
+  <!-- Convert Section -->
+  <div id="convert" class="section active">
+    <button id="pickConvert">Choose AVI File(s)</button>
+    <input type="file" id="convertInput" accept="video/*,.avi,.mp4,.mov,.mkv,video/x-msvideo,video/mp4,video/quicktime,video/x-matroska" multiple>
+    <div id="convertList" class="file-list"></div>
+    <div id="convertWarning"></div>
+    <button id="startConvert" disabled>Convert to MP4</button>
+    <div id="convertProgress"></div>
+    <div id="convertOutputs"></div>
+  </div>
+
+  <!-- Combine Section -->
+  <div id="combine" class="section">
+    <button id="pickCombine">Choose Videos (AVI or MP4)</button>
+    <input type="file" id="combineInput" accept="video/*,.avi,.mp4,.mov,.mkv,video/x-msvideo,video/mp4,video/quicktime,video/x-matroska" multiple>
+    <div class="reorder-hint">Drag items to reorder</div>
+    <div id="combineList" class="file-list"></div>
+    <div id="combineWarning"></div>
+    <button id="startCombine" disabled>Combine into One MP4</button>
+    <div id="combineProgress"></div>
+    <div id="combineOutputs"></div>
+  </div>
+
+  <div id="globalStatus" class="status" style="text-align:center; margin-top:20px;"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
